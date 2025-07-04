@@ -1,1 +1,35 @@
+{% extends "base.html" %}
 
+{% block title %}登录 - 我的博客{% endblock %}
+
+{% block content %}
+    <div class="col-md-6 offset-md-3">
+        <h1 class="mt-4 mb-4">用户登录</h1>
+        
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            
+            <div class="mb-3">
+                {{ form.identity.label(class="form-label") }}
+                {{ form.identity(class="form-control", placeholder="请输入邮箱或用户名") }}
+                {% for error in form.identity.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+            
+            <div class="mb-3">
+                {{ form.password.label(class="form-label") }}
+                {{ form.password(class="form-control", placeholder="请输入密码") }}
+                {% for error in form.password.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+            
+            <button type="submit" class="btn btn-primary">登录</button>
+        </form>
+        
+        <div class="mt-4">
+            <p>还没有账号? <a href="{{ url_for('auth.register') }}">点击注册</a></p>
+        </div>
+    </div>
+{% endblock %}    

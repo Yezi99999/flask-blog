@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+{% extends "base.html" %}
+
+{% block title %}{% if title %}{{ title }}{% else %}首页{% endif %}{% endblock %}
+
+{% block content %}
+    <h1 class="mb-4">{% if title %}{{ title }}{% else %}最新文章{% endif %}</h1>
+
+    {% for post in posts.items %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="card-title">{{ post.title }}</h2>
+            <div class="post-meta mb-2">
+                <span><i class="fa fa-user"></i> {{ post.author.username }}</span>
+                <span class="mx-2">|</span>
+                <span><i class="fa fa-calendar"></i> {{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                <span class="mx-2">|</span>
+                <span><i class="fa fa-folder"></i>
+                    <a href="{{ url_for('main.category_posts', category_id=post.category_id) }}">
+                        {{ post.category.name }}
+                    </a>
+                </span>
+                <span class="mx-2">|</span>
+                <span><i class="fa fa-comments"></i> {{ post.comments|length }} 条评论</span>
+                <span class="mx-2">|</span>
+                <span><i class="fa fa-thumbs-up"></i> <span id="like-count-{{ post.id }}" class="like-count">{{ post.like_count() }}</span> 点赞</span>
+            </div>
+            <p class="card-text">{{ post.content[:300] }}{% if post.content|length > 300 %}...{% endif %}</p>
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="{{ url_for('main.post', post_id=post.id) }}" class="btn btn-primary">阅读全文 →</a>
+                {% if current_user.is_authenticated %}
+                    <form id="like-form-{{ post.id }}" class="like-form" method="POST" action="{{ url_for('likes.like_post', post_id=post.id) }}">
+                        {{ form.hidden_tag() }} <!-- 添加 CSRF 令牌 -->
+                        {% set liked = false %}
+                        {% for like in post.likes %}
+                            {% if like.user_id == current_user.id %}
+                                {% set liked = true %}
+                            {% endif %}
+                        {% endfor %}
+                        <button type="button" class="btn like-button {% if liked %}btn-secondary{% else %}btn-outline-primary{% endif %}"
+                                id="like-button-{{ post.id }}"
+                                data-post-id="{{ post.id }}"
+                                data-liked="{{ liked|lower }}">
+                            {% if liked %}
+                                取消点赞 (<span id="like-count-text-{{ post.id }}" class="like-count-text">{{ post.like_count() }}</span>)
+                            {% else %}
+                                点赞 (<span id="like-count-text-{{ post.id }}" class="like-count-text">{{ post.like_count() }}</span>)
+                            {% endif %}
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- 分页导航 -->
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if posts.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('main.home', page=posts.prev_num) }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link" aria-hidden="true">&laquo;</span>
+            </li>
+            {% endif %}
+
+            {% for page_num in posts.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if page_num %}
+                    {% if posts.page == page_num %}
+                    <li class="page-item active"><a class="page-link" href="{{ url_for('main.home', page=page_num) }}">{{ page_num }}</a></li>
+                    {% else %}
+                    <li class="page-item"><a class="page-link" href="{{ url_for('main.home', page=page_num) }}">{{ page_num }}</a></li>
+                    {% endif %}
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+
+            {% if posts.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('main.home', page=posts.next_num) }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link" aria-hidden="true">&raquo;</span>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+
+    <script>
+        // 确保 DOM 完全加载后再执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化所有点赞按钮
+            document.querySelectorAll('.like-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const postId = this.getAttribute('data-post-id');
+                    toggleLike(postId);
+                });
+            });
+        });
+
+        function toggleLike(postId) {
+            console.log('尝试处理文章 ID:', postId);
+
+            // 使用更健壮的选择器
+            const form = document.querySelector(`.like-form[id="like-form-${postId}"]`);
+            const button = document.querySelector(`.like-button[id="like-button-${postId}"]`);
+            const likeCount = document.querySelector(`.like-count[id="like-count-${postId}"]`);
+            const likeCountText = document.querySelector(`.like-count-text[id="like-count-text-${postId}"]`);
+
+            // 检查元素是否成功获取
+            if (!form || !button || !likeCount || !likeCountText) {
+                console.error('未能获取到必要的 DOM 元素:', {
+                    form: form,
+                    button: button,
+                    likeCount: likeCount,
+                    likeCountText: likeCountText
+                });
+                return;
+            }
+
+            console.log('开始处理点赞请求:', postId);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', form.action, true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    console.log('点赞请求成功:', xhr.responseText);
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (likeCount) {
+                            likeCount.textContent = response.like_count;
+                        }
+                        if (likeCountText) {
+                            likeCountText.textContent = response.like_count;
+                        }
+
+                        if (response.liked) {
+                            button.classList.remove('btn-outline-primary');
+                            button.classList.add('btn-secondary');
+                            button.textContent = `取消点赞 (${response.like_count})`;
+                            button.setAttribute('data-liked', 'true');
+                        } else {
+                            button.classList.remove('btn-secondary');
+                            button.classList.add('btn-outline-primary');
+                            button.textContent = `点赞 (${response.like_count})`;
+                            button.setAttribute('data-liked', 'false');
+                        }
+                        // 点赞或取消点赞成功后刷新页面
+                        window.location.reload();
+                    } catch (error) {
+                        console.error('解析响应失败:', error);
+                    }
+                } else if (xhr.readyState === 4) {
+                    console.error('点赞请求失败:', xhr.status, xhr.statusText);
+                }
+            };
+
+            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+            xhr.send(`csrf_token=${csrfToken}`);
+        }
+    </script>
+{% endblock %}

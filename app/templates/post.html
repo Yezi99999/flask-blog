@@ -1,0 +1,189 @@
+<!-- flask-blog-complete/app/templates/post.html -->
+<!DOCTYPE html>
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block content %}
+    <article class="mb-4">
+        <h1 class="mt-4 mb-3">{{ post.title }}</h1>
+
+        <div class="post-meta mb-4">
+            <span><i class="fa fa-user"></i> {{ post.author.username }}</span>
+            <span class="mx-2">|</span>
+            <span><i class="fa fa-calendar"></i> {{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+            <span class="mx-2">|</span>
+            <span><i class="fa fa-folder"></i>
+                <a href="{{ url_for('main.category_posts', category_id=post.category_id) }}">
+                    {{ post.category.name }}
+                </a>
+            </span>
+            <span class="mx-2">|</span>
+            <span><i class="fa fa-comments"></i> {{ post.comments|length }} 条评论</span>
+            <span class="mx-2">|</span>
+            <span><i class="fa fa-thumbs-up"></i> <span id="like-count">{{ post.like_count() }}</span> 点赞</span>
+        </div>
+
+        <div class="mb-4">
+            {{ post.content|safe }}
+        </div>
+
+        <!-- 显示附件链接 -->
+        {% if post.file_path %}
+        <div class="mb-4">
+            <a href="{{ url_for('static', filename=post.file_path) }}" target="_blank">
+                <i class="fa fa-paperclip"></i> 下载附件
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- 编辑/删除按钮 -->
+        {% if current_user.is_authenticated and (current_user == post.author or current_user.is_admin) %}
+        <div class="mb-4">
+            <a href="{{ url_for('posts.edit_post', post_id=post.id) }}" class="btn btn-secondary">
+                <i class="fa fa-pencil"></i> 编辑文章
+            </a>
+            <form action="{{ url_for('posts.delete_post', post_id=post.id) }}" method="POST" class="d-inline">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('确定要删除这篇文章吗？')">
+                    <i class="fa fa-trash"></i> 删除文章
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- 点赞按钮 -->
+        <div class="mb-4">
+            <form id="like-form" method="POST" action="{{ url_for('likes.like_post', post_id=post.id) }}">
+                {{ like_form.hidden_tag() }} <!-- 添加 CSRF 令牌 -->
+                <button type="button" class="btn {% if user_has_liked %}btn-secondary{% else %}btn-outline-primary{% endif %}"
+                        id="like-button"
+                        data-liked="{{ user_has_liked|lower }}">
+                    {% if user_has_liked %}
+                        取消点赞 (<span id="like-count-text">{{ post.like_count() }}</span>)
+                    {% else %}
+                        点赞 (<span id="like-count-text">{{ post.like_count() }}</span>)
+                    {% endif %}
+                </button>
+            </form>
+        </div>
+
+        <!-- 评论区 -->
+        <div class="mb-4">
+            <h3 class="mb-4">评论 ({{ post.comments|length }})</h3>
+
+            <!-- 发表评论表单 -->
+            {% if current_user.is_authenticated %}
+            <div class="card mb-4">
+                <div class="card-header">发表评论</div>
+                <div class="card-body">
+                    <form method="POST" action="">
+                        {{ form.hidden_tag() }}
+                        <div class="mb-3">
+                            {{ form.content(class="form-control", rows="3", placeholder="写下你的评论...") }}
+                            {% for error in form.content.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                        <button type="submit" class="btn btn-primary">提交评论</button>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                请 <a href="{{ url_for('auth.login') }}">登录</a> 后发表评论
+            </div>
+            {% endif %}
+
+            <!-- 评论列表 -->
+            {% for comment in post.comments %}
+            <div class="comment">
+                <div class="d-flex justify-content-between">
+                    <h5 class="mb-1">{{ comment.author.username }}</h5>
+                    <div class="comment-meta">
+                        {{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}
+                        {% if comment.updated_at and comment.updated_at > comment.created_at %}
+                            <span class="text-muted">(编辑于 {{ comment.updated_at.strftime('%Y-%m-%d %H:%M') }})</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <p class="mt-2">{{ comment.content }}</p>
+
+                <!-- 编辑/删除评论按钮 -->
+                {% if current_user.is_authenticated and (current_user == comment.author or current_user.is_admin) %}
+                <div class="d-flex justify-content-end">
+                    <a href="{{ url_for('comments.edit_comment', comment_id=comment.id) }}" class="btn btn-sm btn-outline-secondary me-2">
+                        <i class="fa fa-pencil"></i> 编辑
+                    </a>
+                    <form action="{{ url_for('comments.delete_comment', comment_id=comment.id) }}" method="POST" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('确定要删除这条评论吗？')">
+                            <i class="fa fa-trash"></i> 删除
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+
+    <script>
+        function toggleLike() {
+            const form = document.getElementById('like-form');
+            const button = document.getElementById('like-button');
+            const likeCount = document.getElementById('like-count');
+            const likeCountText = document.getElementById('like-count-text');
+
+            // 检查元素是否成功获取
+            if (!form || !button || !likeCount || !likeCountText) {
+                console.error('未能获取到必要的 DOM 元素:', {
+                    form: form,
+                    button: button,
+                    likeCount: likeCount,
+                    likeCountText: likeCountText
+                });
+                return;
+            }
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', form.action, true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (likeCount) {
+                            likeCount.textContent = response.like_count;
+                        }
+                        if (likeCountText) {
+                            likeCountText.textContent = response.like_count;
+                        }
+
+                        if (response.liked) {
+                            button.classList.remove('btn-outline-primary');
+                            button.classList.add('btn-secondary');
+                            button.textContent = `取消点赞 (${response.like_count})`;
+                            button.setAttribute('data-liked', 'true');
+                        } else {
+                            button.classList.remove('btn-secondary');
+                            button.classList.add('btn-outline-primary');
+                            button.textContent = `点赞 (${response.like_count})`;
+                            button.setAttribute('data-liked', 'false');
+                        }
+                        // 点赞或取消点赞成功后刷新页面
+                        window.location.reload();
+                    } catch (error) {
+                        console.error('解析响应失败:', error);
+                    }
+                } else if (xhr.readyState === 4) {
+                    console.error('点赞请求失败:', xhr.status, xhr.statusText);
+                }
+            };
+
+            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+            xhr.send(`csrf_token=${csrfToken}`);
+        }
+
+        // 绑定点击事件
+        document.getElementById('like-button').addEventListener('click', toggleLike);
+    </script>
+{% endblock %}

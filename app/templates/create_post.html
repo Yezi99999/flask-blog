@@ -1,0 +1,46 @@
+<!-- app/templates/create_post.html -->
+{% extends "base.html" %}
+
+{% block title %}发布文章 - 我的博客{% endblock %}
+
+{% block content %}
+    <h1 class="mb-4">发布文章</h1>
+
+    <form method="POST" enctype="multipart/form-data">  <!-- 添加 enctype 属性 -->
+        {{ form.hidden_tag() }}
+
+        <div class="mb-3">
+            {{ form.title.label(class="form-label") }}
+            {{ form.title(class="form-control", placeholder="请输入文章标题") }}
+            {% for error in form.title.errors %}
+                <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.category.label(class="form-label") }}
+            {{ form.category(class="form-select") }}
+            {% for error in form.category.errors %}
+                <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.content.label(class="form-label") }}
+            {{ form.content(class="form-control", rows="10", placeholder="请输入文章内容") }}
+            {% for error in form.content.errors %}
+                <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        </div>
+
+        <div class="mb-3">
+            {{ form.file.label(class="form-label") }}
+            {{ form.file(class="form-control") }}
+            {% for error in form.file.errors %}
+                <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+        </div>
+        
+        <button type="submit" class="btn btn-primary">发布文章</button>
+    </form>
+{% endblock %}    

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}管理后台{% endblock %}
+
+{% block content %}
+    <h1 class="mb-4">管理后台</h1>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">文章总数</h5>
+                    <p class="card-text display-4">{{ post_count }}</p>
+                    <a href="{{ url_for('admin.admin_posts') }}" class="text-white">查看所有文章 <i class="fa fa-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">用户总数</h5>
+                    <p class="card-text display-4">{{ user_count }}</p>
+                    <a href="{{ url_for('admin.admin_users') }}" class="text-white">查看所有用户 <i class="fa fa-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h5 class="card-title">评论总数</h5>
+                    <p class="card-text display-4">{{ comment_count }}</p>
+                    <a href="{{ url_for('admin.admin_comments') }}" class="text-white">查看所有评论 <i class="fa fa-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">最新文章</div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for post in recent_posts %}
+                        <li class="list-group-item">
+                            <a href="{{ url_for('main.post', post_id=post.id) }}">{{ post.title }}</a>
+                            <div class="post-meta">
+                                <small>{{ post.author.username }} | {{ post.created_at.strftime('%Y-%m-%d') }}</small>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">最新评论</div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for comment in recent_comments %}
+                        <li class="list-group-item">
+                            <div class="comment-meta">
+                                <small>{{ comment.author.username }} 评论于 {{ comment.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            </div>
+                            <p class="mb-0">{{ comment.content[:50] }}{% if comment.content|length > 50 %}...{% endif %}</p>
+                            <div class="mt-2">
+                                <a href="{{ url_for('main.post', post_id=comment.post_id) }}" class="btn btn-sm btn-outline-primary">查看原文</a>
+                                <a href="{{ url_for('comments.edit_comment', comment_id=comment.id) }}" class="btn btn-sm btn-outline-secondary">编辑</a>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
